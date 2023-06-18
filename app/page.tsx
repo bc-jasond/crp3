@@ -1,95 +1,96 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
 
+import {Box, Button, Heading, Text, Toast, useToast, VStack} from "@chakra-ui/react";
+import {formatEther, formatUnits} from "@ethersproject/units";
+//import {useCoingeckoPrice} from "@usedapp/coingecko";
+import {useConfig, useEtherBalance, useEthers, useGasPrice, useTokenBalance} from '@usedapp/core'
+import {BigNumberish} from "ethers";
+
+import Head from "next/head";
+import React, {useEffect, useState} from "react";
+import recurringPaymentABI from "../lib/RecurringPayment.abi.json";
+import { RECURRING_PAYMENT_CONTRACT } from "../constants";
+
+const ConnectButton = () => {
+  const { account, deactivate, activateBrowserWallet } = useEthers()
+  // 'account' being undefined means that we are not connected.
+  if (account) {
+    return <Button onClick={() => deactivate()}>Disconnect</Button>
+  }
+  return <Button onClick={() => activateBrowserWallet()}>Connect</Button>
+}
 export default function Home() {
+  const toast = useToast()
+  const [errorInternal, setErrorInternal] = useState<string>();
+  const { error, account, chainId } = useEthers()
+  const { readOnlyUrls = {} } = useConfig()
+  // gas token - MATIC
+  const balance = useEtherBalance(account)
+  // https://polygonscan.com/token/0x8f3cf7ad23cd3cadbd9735aff958023239c6a063
+  // PoS means Proof-of-Stake
+  // (PoS) Dai Stablecoin
+  const DAI_ADDRESS = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063'
+  const daiBalance = useTokenBalance(DAI_ADDRESS, account)
+  // https://polygonscan.com/token/0x2791bca1f2de4661ed88a30c99a7a9449aa84174
+  // (PoS) USD Coin
+  const USDC_ADDRESS = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174'
+  const usdcBalance = useTokenBalance(USDC_ADDRESS, account)
+  // https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f
+  // (PoS) Tether USD
+  const USDT_ADDRESS = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f'
+  const usdtBalance = useTokenBalance(USDT_ADDRESS, account)
+  // https://polygonscan.com/token/0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6
+  // Wrapped BTC
+  const WBTC_ADDRESS = '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6'
+  const wbtcBalance = useTokenBalance(WBTC_ADDRESS, account)
+  // https://polygonscan.com/token/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619
+  // Wrapped ETH
+  const WETH_ADDRESS = '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
+  const wethBalance = useTokenBalance(WETH_ADDRESS, account)
+  
+  const gasPrice = useGasPrice()
+  //const maticPrice = useCoingeckoPrice('matic', 'usd')
+  const unsupportedNetworkErrorId = 'unsupported-network-error'
+  if (error?.name === 'ChainIdError' && !toast.isActive(unsupportedNetworkErrorId)) {
+    toast({
+      id: unsupportedNetworkErrorId,
+      title: 'Unsupported Network',
+      description: "Switch to Polygon Mainnet.",
+      status: 'error',
+      duration: null,
+      isClosable: false,
+    })
+  }
+  if (!error && toast.isActive(unsupportedNetworkErrorId)) {
+    toast.close(unsupportedNetworkErrorId)
+  }
+  
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+    <>
+      <Head>
+        <title>Crypto Recurring Payments</title>
+      </Head>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+      <Heading display="flex" justifyContent="center" s="h3" my={4}>
+        Crypto Recurring Payments
+      </Heading>
+      <VStack>
+        <ConnectButton />
+        {account && (
+          <Box mb={0} p={4} w="" borderWidth="1px" borderRadius="lg">
+            <Heading my={4} fontSize="xl">
+              Account info
+            </Heading>
+            <Text>{account}</Text>
+            <Text>{balance ? formatEther(balance as BigNumberish) : 0} MATIC gas: {gasPrice ? formatEther(gasPrice) : '?'}</Text>
+            <Text>{usdcBalance ? formatUnits(usdcBalance, 6) : 0} USDC</Text>
+            <Text>{usdtBalance ? formatUnits(usdtBalance, 6) : 0} USDT</Text>
+            <Text>{usdtBalance ? formatUnits(usdtBalance, 18) : 0} WETH</Text>
+            <Text>{usdtBalance ? formatUnits(usdtBalance, 18) : 0} WBTC</Text>
+            <Text>{daiBalance ? formatUnits(daiBalance, 18) : 0} DAI</Text>
+          </Box>
+        )}
+      </VStack>
+    </>
+  );
 }
